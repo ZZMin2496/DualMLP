@@ -1,4 +1,3 @@
-"""Feature extraction using the historical DualMLP encoder rules."""
 import argparse
 import os
 from pathlib import Path
