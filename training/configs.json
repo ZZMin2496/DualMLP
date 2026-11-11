@@ -1,0 +1,108 @@
+{
+  "kcat": {
+    "dataset_path": "datasets/kcat.csv",
+    "features_dir": "features/kcat",
+    "n_samples": 48608,
+    "target_column": "target_log10",
+    "target_scale": "log10",
+    "original_unit": "s^-1",
+    "sample_id_column": "sample_id",
+    "fold_column": "fold",
+    "split": {
+      "n_folds": 10,
+      "validation_fold_offset": -1,
+      "n_train_folds": 8,
+      "n_validation_folds": 1,
+      "n_test_folds": 1
+    },
+    "task": "kcat",
+    "seed": 42,
+    "seed_mode": "fixed",
+    "models_dir": "models/kcat",
+    "results_dir": "results/kcat",
+    "model_config": {
+      "esmc_dim": 1152,
+      "chemberta_dim": 384,
+      "maccs_dim": 166,
+      "total_dim": 1702,
+      "hidden_dims": [
+        512,
+        256
+      ],
+      "activation": "relu",
+      "dropout": 0.38264162579882566,
+      "bn_momentum": 0.01,
+      "bn_eps": 0.001,
+      "optimizer": "adamw",
+      "learning_rate": 2.7173495309372726e-05,
+      "weight_decay": 0.00012318474934147397,
+      "batch_size": 32,
+      "loss": "mse",
+      "scheduler": "none",
+      "hpo_trial": 28
+    },
+    "training_config": {
+      "max_epochs": 150,
+      "early_stop_patience": 20,
+      "min_delta": 0.001,
+      "eval_batch_size": 1024
+    },
+    "evaluation_status": "exploratory: retained dataset selected using previous OOF test errors",
+    "dataset_sha256": "a80914b739179509172b5c3ff162117d9e5170175d833d33302658cf4e98d02c"
+  },
+  "Km": {
+    "dataset_path": "datasets/Km.csv",
+    "features_dir": "features/Km",
+    "n_samples": 80912,
+    "target_column": "target_log10",
+    "target_scale": "log10",
+    "original_unit": "mM",
+    "sample_id_column": "sample_id",
+    "fold_column": "fold",
+    "split": {
+      "n_folds": 10,
+      "validation_fold_offset": -1,
+      "n_train_folds": 8,
+      "n_validation_folds": 1,
+      "n_test_folds": 1
+    },
+    "task": "Km",
+    "seed": 42,
+    "seed_mode": "fold_offset",
+    "models_dir": "models/Km",
+    "results_dir": "results/Km",
+    "model_config": {
+      "esmc_dim": 1152,
+      "chemberta_dim": 384,
+      "maccs_dim": 166,
+      "total_dim": 1702,
+      "hidden_dims": [
+        1024,
+        512,
+        256
+      ],
+      "activation": "relu",
+      "dropout": 0.49963293114364615,
+      "bn_momentum": 0.1,
+      "bn_eps": 0.001,
+      "optimizer": "adam",
+      "learning_rate": 6.398125299649048e-05,
+      "weight_decay": 0.0004018121344309882,
+      "batch_size": 16,
+      "loss": "smooth_l1",
+      "smooth_l1_beta": 2.0,
+      "scheduler": "plateau",
+      "scheduler_factor": 0.7,
+      "scheduler_patience": 8,
+      "hpo_trial": 40
+    },
+    "training_config": {
+      "max_epochs": 150,
+      "early_stop_patience": 20,
+      "min_delta": 0.001,
+      "eval_batch_size": 1024
+    },
+    "evaluation_status": "exploratory: retained dataset selected using previous OOF test errors",
+    "dataset_sha256": "2acb32437935b9bd7b04098791af2e16abe5b6f4b81e34b7a7ca5f97342a42b2"
+  }
+}
