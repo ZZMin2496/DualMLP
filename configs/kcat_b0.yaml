@@ -1,0 +1,68 @@
+task: kcat
+catpred_root: /home/ubuntu/data/CatPred-DB
+cache_root: features_cache/kcat_full
+protein:
+  model_name: esmc_600m
+  max_len: 2048
+  overlap: 128
+  hf_cache_dir: models_abs/encoders/esmc
+chemical:
+  chemberta_model: DeepChem/ChemBERTa-77M-MTR
+  max_len: 512
+  hf_cache_dir: models_abs/encoders/chemberta
+reaction:
+  rxnfp_model: bert_pretrained
+  max_len: 512
+structure:
+  max_knn: 16
+  max_distance: 12.0
+  assume_bfactor_is_plddt: true
+  structure_source: alphafold_predicted
+  chain_id: most_ca
+data:
+  unified_csv: data/adapted/kcat_unified.csv
+  feature_index_csv: features_cache/kcat_full/index/feature_index.csv
+  cache_root: features_cache/kcat_full
+  max_protein_length: 2048
+  task: kcat
+split:
+  protocol: official
+  folds:
+  - 0
+  n_folds: 10
+  cluster_column: sequence_40cluster
+  require_reaction: false
+  require_structure: false
+output:
+  root: results_abs
+experiment: kcat_b0
+modalities:
+  protein: true
+  chemical: true
+  reaction: false
+  structure: false
+model:
+  architecture: baseline
+  variant: b0
+  hidden_dims:
+  - 512
+  - 256
+  - 128
+  dropout: 0.1
+training:
+  device: cpu
+  micro_batch_size: 32
+  effective_batch_size: 128
+  max_epochs: 200
+  lr: 0.0001
+  weight_decay: 1.0e-05
+  seeds:
+  - 42
+  - 2026
+  - 3407
+  early_stopping_patience: 20
+  scheduler_patience: 5
+  grad_clip_norm: 1.0
+  evaluate_test: true
+features:
+  index_dir: features_cache/kcat_full/index

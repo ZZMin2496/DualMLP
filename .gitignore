@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Large derived data, model caches and experiment outputs for kinetics_abs
+data/
+features_cache/
+models_abs/
+results_abs*/
+checkpoints/
+*.pt
+*.pth

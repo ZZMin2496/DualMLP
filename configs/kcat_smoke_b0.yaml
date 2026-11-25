@@ -1,0 +1,14 @@
+experiment: kcat_smoke_b0
+task: kcat
+catpred_root: /home/ubuntu/data/CatPred-DB
+cache_root: features_cache/kcat_smoke
+modalities: {protein: true, chemical: true, reaction: false, structure: false}
+protein: {model_name: esmc_600m, max_len: 2048, overlap: 128, hf_cache_dir: models_abs/encoders/esmc}
+chemical: {chemberta_model: DeepChem/ChemBERTa-77M-MTR, max_len: 512, hf_cache_dir: models_abs/encoders/chemberta}
+reaction: {rxnfp_model: bert_pretrained, max_len: 512}
+structure: {max_knn: 16, max_distance: 12.0, assume_bfactor_is_plddt: true, structure_source: alphafold_predicted, chain_id: most_ca}
+data: {unified_csv: data/adapted/kcat_smoke_unified.csv, feature_index_csv: features_cache/kcat_smoke/index/feature_index.csv, cache_root: features_cache/kcat_smoke, max_protein_length: 2048, task: kcat}
+split: {protocol: official, folds: [0], n_folds: 10, cluster_column: sequence_40cluster, require_reaction: false, require_structure: false}
+model: {architecture: baseline, variant: b0, hidden_dims: [512, 256, 128], dropout: 0.1}
+training: {device: cpu, micro_batch_size: 16, effective_batch_size: 32, max_epochs: 1, lr: 0.0001, weight_decay: 0.00001, seeds: [42], early_stopping_patience: 20, scheduler_patience: 5, grad_clip_norm: 1.0, evaluate_test: false}
+output: {root: results_abs_smoke_b0}
