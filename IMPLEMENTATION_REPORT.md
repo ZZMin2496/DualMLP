@@ -20,7 +20,7 @@
 - esm 3.2.1.post1，rxnfp 0.1.0（需 `--no-deps` 安装，见下），rdkit 2026.9.2
 - numpy 2.2.6，pandas 2.3.3，scipy 1.15.3，scikit-learn 1.7.2，PyYAML 6.0.4，tqdm 4.70.1，httpx 0.28.1
 
-锁定文件：`requirements_kinetics_abs.txt`。torch 需从 CPU index 安装；`rxnfp==0.1.0` 元数据硬钉冲突依赖，安装本文件后需执行 `pip install --no-deps rxnfp==0.1.0`。模型 checkpoint 信息由 `train.py` 写入 `checkpoint_best.pt` / `checkpoint_last.pt` 的 `config` 与 `experiment_summary.json`；本报告不内嵌大文件。
+锁定文件：`requirements_kinetics_abs.txt`。torch 需从 CPU index 安装；`rxnfp==0.1.0` 元数据硬钉冲突依赖，安装本文件后需执行 `pip install --no-deps rxnfp==0.1.0`；rxnfp 依赖 `pkg_resources`，requirements 锁定 `setuptools==78.1.0` 以避免 setuptools 82 移除该模块。模型 checkpoint 信息由 `train.py` 写入 `checkpoint_best.pt` / `checkpoint_last.pt` 的 `config` 与 `experiment_summary.json`；本报告不内嵌大文件。
 
 ## 3. 数据适配与审计（P1）
 
