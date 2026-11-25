@@ -7,7 +7,7 @@ from kinetics_abs.model import build_model
 from kinetics_abs.chemical_features import CHEM_TOTAL_DIM
 from kinetics_abs.protein_features import ESMC_DIM
 from kinetics_abs.reaction_features import RXNFP_DIM
-from kinetics_abs.structure_features import EDGE_ATTR_DIM, EDGE_QUALITY_DIM, NODE_QUALITY_DIM, build_graph
+from kinetics_abs.structure_features import EDGE_ATTR_DIM, EDGE_QUALITY_DIM, NODE_QUALITY_DIM, _parse_pdb_ca, build_graph
 
 
 def test_compute_metrics_basic():
@@ -62,3 +62,33 @@ def test_fusion_model_graph_modes_forward():
         output = model(batch)
         assert output.shape == (batch_size, 1)
         assert torch.isfinite(output).all()
+
+
+def _pdb_atom_line(chain: str, res_seq: int, resname: str, x: float, y: float, z: float, bfactor: float) -> str:
+    line = [" "] * 80
+    line[0:6] = "ATOM  "
+    line[6:11] = f"{1:5d}"
+    line[12:16] = " CA "
+    line[17:20] = resname
+    line[21] = chain
+    line[22:26] = f"{res_seq:4d}"
+    line[30:38] = f"{x:8.3f}"
+    line[38:46] = f"{y:8.3f}"
+    line[46:54] = f"{z:8.3f}"
+    line[60:66] = f"{bfactor:6.2f}"
+    return "".join(line) + "\n"
+
+
+def test_parse_pdb_ca_most_ca_chain(tmp_path):
+    path = tmp_path / "two_chains.pdb"
+    rows = []
+    for i in range(3):
+        rows.append(_pdb_atom_line("A", i + 1, "ALA", float(i), 0.0, 0.0, 90.0))
+    rows.append(_pdb_atom_line("B", 1, "GLY", 10.0, 0.0, 0.0, 50.0))
+    path.write_text("".join(rows), encoding="utf-8")
+    auto = _parse_pdb_ca(path, "most_ca")
+    assert auto["chain"] == "A"
+    assert len(auto["residues"]) == 3
+    explicit = _parse_pdb_ca(path, "B")
+    assert explicit["chain"] == "B"
+    assert len(explicit["residues"]) == 1

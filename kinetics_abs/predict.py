@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 from .dataset import KineticsDataset, LengthBucketBatchSampler, collate_kinetics_batch
 from .model import baseline_input, build_model
-from .train import _forward, _model_needs
+from .train import _forward, _load_checkpoint, _model_needs
 from .utils import project_path, read_yaml
 
 
@@ -27,7 +27,7 @@ def predict_file(
     device: str = "cpu",
 ) -> pd.DataFrame:
     config = read_yaml(config_path)
-    checkpoint = torch.load(project_path(checkpoint_path), map_location=device, weights_only=False)
+    checkpoint = _load_checkpoint(project_path(checkpoint_path))
     saved_config = checkpoint.get("config", config)
     model_config = saved_config.get("model", config.get("model", {}))
     data_cfg = dict(config.get("data", {}))

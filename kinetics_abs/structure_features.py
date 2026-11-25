@@ -116,17 +116,18 @@ def _parse_pdb_ca(path: Path, chain_id: str | None = None) -> dict[str, Any]:
                 order.append(key)
     if not order:
         raise ValueError("No CA atoms found")
-    # Select chain with most CA residues unless explicitly requested.
-    if chain_id:
-        selected = [key for key in order if residues[key]["chain"] == chain_id]
-        if not selected:
-            raise ValueError(f"Requested chain {chain_id} not found")
-    else:
+    # Select chain with most CA residues unless an explicit one-character chain ID is requested.
+    chain_selection = "" if chain_id is None else str(chain_id).strip()
+    if chain_selection.lower() in {"", "most_ca", "auto", "all"}:
         counts: dict[str, int] = {}
         for key in order:
             counts[residues[key]["chain"]] = counts.get(residues[key]["chain"], 0) + 1
         best_chain = max(counts, key=counts.get)  # type: ignore[arg-type]
         selected = [key for key in order if residues[key]["chain"] == best_chain]
+    else:
+        selected = [key for key in order if residues[key]["chain"] == chain_selection]
+        if not selected:
+            raise ValueError(f"Requested chain {chain_selection} not found")
     records = [residues[key] for key in selected]
     return {"chain": records[0]["chain"], "residues": records}
 

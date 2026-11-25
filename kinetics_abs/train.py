@@ -19,6 +19,43 @@ from .model import baseline_input, build_model, count_parameters
 from .utils import ensure_dir, project_path, read_yaml, set_seed, write_json_atomic
 
 
+def _numpy_state_to_safe(state: Any) -> dict[str, Any]:
+    name, keys, pos, has_gauss, cached_gauss = state
+    return {
+        "name": str(name),
+        "keys": [int(x) for x in np.asarray(keys, dtype=np.uint32).tolist()],
+        "pos": int(pos),
+        "has_gauss": int(has_gauss),
+        "cached_gauss": float(cached_gauss),
+    }
+
+
+def _numpy_state_from_safe(state: dict[str, Any]) -> Any:
+    return (
+        str(state["name"]),
+        np.asarray(state["keys"], dtype=np.uint32),
+        int(state["pos"]),
+        int(state["has_gauss"]),
+        float(state["cached_gauss"]),
+    )
+
+
+def _move_state_to_device(value: Any, device: torch.device) -> Any:
+    if torch.is_tensor(value):
+        return value.to(device)
+    if isinstance(value, dict):
+        return {k: _move_state_to_device(v, device) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_move_state_to_device(v, device) for v in value]
+    if isinstance(value, tuple):
+        return tuple(_move_state_to_device(v, device) for v in value)
+    return value
+
+
+def _load_checkpoint(path: str | Path) -> dict[str, Any]:
+    return torch.load(path, map_location="cpu", weights_only=True)
+
+
 def _model_needs(model_config: dict[str, Any]) -> dict[str, Any]:
     architecture = str(model_config.get("architecture", "fusion"))
     if architecture == "baseline":
@@ -136,9 +173,9 @@ def train_one(config: dict[str, Any], fold_index: int, seed: int, output_dir: st
     history: list[dict[str, Any]] = []
     sampler_epoch = 0
     if resume and last_path.is_file():
-        checkpoint = torch.load(last_path, map_location=device, weights_only=False)
-        model.load_state_dict(checkpoint["model_state"])
-        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        checkpoint = _load_checkpoint(last_path)
+        model.load_state_dict(_move_state_to_device(checkpoint["model_state"], device))
+        optimizer.load_state_dict(_move_state_to_device(checkpoint["optimizer_state"], device))
         if "scheduler_state" in checkpoint:
             scheduler.load_state_dict(checkpoint["scheduler_state"])
         start_epoch = int(checkpoint.get("epoch", -1)) + 1
@@ -147,7 +184,8 @@ def train_one(config: dict[str, Any], fold_index: int, seed: int, output_dir: st
         history = list(checkpoint.get("history", []))
         sampler_epoch = int(checkpoint.get("sampler_epoch", start_epoch))
         random.setstate(checkpoint.get("random_state", random.getstate()))
-        np.random.set_state(checkpoint.get("numpy_state", np.random.get_state()))
+        if "numpy_state" in checkpoint:
+            np.random.set_state(_numpy_state_from_safe(checkpoint["numpy_state"]))
         torch.set_rng_state(checkpoint.get("torch_state", torch.get_rng_state()))
         if device.type == "cuda" and "torch_cuda_state" in checkpoint:
             torch.cuda.set_rng_state_all(checkpoint["torch_cuda_state"])
@@ -199,7 +237,7 @@ def train_one(config: dict[str, Any], fold_index: int, seed: int, output_dir: st
                 "history": history,
                 "sampler_epoch": sampler_epoch,
                 "random_state": random.getstate(),
-                "numpy_state": np.random.get_state(),
+                "numpy_state": _numpy_state_to_safe(np.random.get_state()),
                 "torch_state": torch.get_rng_state(),
                 "torch_cuda_state": torch.cuda.get_rng_state_all() if device.type == "cuda" else None,
             })
@@ -228,7 +266,7 @@ def train_one(config: dict[str, Any], fold_index: int, seed: int, output_dir: st
             "history": history,
             "sampler_epoch": sampler_epoch,
             "random_state": random.getstate(),
-            "numpy_state": np.random.get_state(),
+            "numpy_state": _numpy_state_to_safe(np.random.get_state()),
             "torch_state": torch.get_rng_state(),
             "torch_cuda_state": torch.cuda.get_rng_state_all() if device.type == "cuda" else None,
         })
@@ -236,8 +274,8 @@ def train_one(config: dict[str, Any], fold_index: int, seed: int, output_dir: st
             break
 
     if best_path.is_file():
-        checkpoint = torch.load(best_path, map_location=device, weights_only=False)
-        model.load_state_dict(checkpoint["model_state"])
+        checkpoint = _load_checkpoint(best_path)
+        model.load_state_dict(_move_state_to_device(checkpoint["model_state"], device))
     val_metrics, val_pred_df = _evaluate_loader(model, val_loader, model_config, device)
     val_pred_df.to_csv(output_dir / "val_predictions.csv", index=False)
 

@@ -32,7 +32,11 @@ def cmd_audit(args: argparse.Namespace) -> None:
 
 def cmd_build_features(args: argparse.Namespace) -> None:
     config = read_yaml(args.config)
-    output_dir = project_path(args.output_dir) if args.output_dir else project_path(config.get("features", {}).get("index_dir", "features_cache/index"))
+    configured_index_dir = config.get("features", {}).get("index_dir")
+    if not configured_index_dir:
+        data_index = config.get("data", {}).get("feature_index_csv")
+        configured_index_dir = str(Path(data_index).parent) if data_index else "features_cache/index"
+    output_dir = project_path(args.output_dir) if args.output_dir else project_path(configured_index_dir)
     summary = build_feature_caches(
         project_path(config["data"]["unified_csv"]),
         output_dir,

@@ -103,7 +103,7 @@ def _catpred_split_frame(task: str, catpred_root: Path) -> pd.DataFrame:
         "sequence_80cluster",
         "sequence_99cluster",
     ]
-    clusters = pd.DataFrame(columns=["Unnamed: 0", *cluster_columns])
+    clusters = pd.DataFrame(columns=["row_index", *cluster_columns])
     if all_rows_path.is_file():
         available = set(pd.read_csv(all_rows_path, nrows=0).columns)
         usecols = ["Unnamed: 0"] + [c for c in cluster_columns if c in available]

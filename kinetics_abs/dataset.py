@@ -92,13 +92,19 @@ class KineticsDataset(Dataset):
 
         unified = load_unified_csv(self.unified_csv)
         index = pd.read_csv(self.feature_index_csv, dtype=str, keep_default_na=False, low_memory=False)
-        missing_index_cols = [c for c in ["sample_id", "protein_status", "chemical_status", "reaction_status", "structure_status"] if c not in index.columns]
+        required_index_cols = ["sample_id", "protein_status", "chemical_status", "reaction_status", "structure_status"]
+        missing_index_cols = [c for c in required_index_cols if c not in index.columns]
         if missing_index_cols:
             raise ValueError(f"feature_index missing columns: {missing_index_cols}")
+        # The unified table already carries adapter-level reaction_status/structure_status;
+        # feature-index build outcomes must stay unambiguous after the merge.
+        feature_status_columns = ["protein_status", "chemical_status", "reaction_status", "structure_status"]
+        index = index.rename(columns={c: f"feature_{c}" for c in feature_status_columns})
         frame = unified.merge(index, on="sample_id", how="left", suffixes=("", "_idx"))
         frame = frame[frame["task"] == task].copy()
         if frame.empty:
             raise ValueError(f"No rows for task {task} in {self.unified_csv}")
+        split_cfg = config.get("split", {})
 
         # Split assignment is computed on the task-level frame so folds are stable across variants.
         if split_protocol == "official":
@@ -113,9 +119,9 @@ class KineticsDataset(Dataset):
             train_mask, val_mask, test_mask = split_mask_for_fold(
                 frame,
                 fold_index=fold_index,
-                n_folds=int(config.get("n_folds", 10)),
+                n_folds=int(split_cfg.get("n_folds", config.get("n_folds", 10))),
                 seed=seed,
-                cluster_column=str(config.get("cluster_column", "sequence_40cluster")),
+                cluster_column=str(split_cfg.get("cluster_column", config.get("cluster_column", "sequence_40cluster"))),
             )
             frame["_split_train"] = train_mask
             frame["_split_val"] = val_mask
@@ -141,20 +147,17 @@ class KineticsDataset(Dataset):
         valid = (
             frame["protein_available"].astype(str).eq("1")
             & frame["chem_available"].astype(str).eq("1")
-            & frame["protein_status"].astype(str).eq("ok")
-            & frame["chemical_status"].astype(str).eq("ok")
+            & frame["feature_protein_status"].astype(str).eq("ok")
+            & frame["feature_chemical_status"].astype(str).eq("ok")
             & protein_length.gt(0)
             & protein_length.le(self.max_protein_length)
         )
         if self.require_label:
             valid &= frame["label_available"].astype(str).eq("1") & frame["label_log10"].astype(str).ne("")
         if self.require_reaction:
-            valid &= frame["reaction_status"].astype(str).eq("ok")
-        else:
-            # Reaction remains optional; missing reactions are represented explicitly.
-            valid &= frame["reaction_status"].astype(str).isin(["ok", "missing_input", "not_built", "disabled", "missing", "incomplete_side", "invalid_separator", "smiles_parse_error", "canonicalization_failed", "reaction_too_long", "tokenize_error", "rxnfp_error", "rxnfp_invalid_output", "not_applicable", "missing_reactant_smiles"])
+            valid &= frame["feature_reaction_status"].astype(str).eq("ok")
         if self.require_structure:
-            valid &= frame["structure_status"].astype(str).eq("ok")
+            valid &= frame["feature_structure_status"].astype(str).eq("ok")
         selected &= valid
         frame = frame[selected].copy()
         if limit is not None:
@@ -181,6 +184,12 @@ class KineticsDataset(Dataset):
         chemical = self._load_chemical(record)
         reaction = self._load_reaction(record) if self.need_reaction else {"reaction_embedding": torch.zeros(RXNFP_DIM, dtype=torch.float32), "available": 0.0}
         structure = self._load_structure(record, int(protein["sequence_length"])) if self.need_structure else self._empty_structure(int(protein["sequence_length"]))
+        label_text = str(record.get("label_log10", "")).strip()
+        try:
+            label_value = float(label_text) if label_text else float("nan")
+        except (TypeError, ValueError):
+            label_value = float("nan")
+        label_available = float(str(record.get("label_available", "")) == "1" and np.isfinite(label_value))
         item = {
             "sample_id": record.get("sample_id", ""),
             "sequence_id": record.get("sequence_id", ""),
@@ -206,8 +215,8 @@ class KineticsDataset(Dataset):
             "edge_quality": structure["edge_quality"],
             "structure_available": float(structure["available"]),
             "aux": self._aux_vector(chemical["available"], reaction["available"], structure),
-            "label": float(record.get("label_log10", "nan")),
-            "label_available": 1.0,
+            "label": float(label_value),
+            "label_available": label_available,
         }
         return item
 

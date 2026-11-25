@@ -17,10 +17,10 @@
 - Python 3.10.12
 - torch 2.14.1+cpu；CUDA 不可用
 - transformers 4.45.2（从 4.46.3 降级以兼容 ESM tokenizer）
-- esm 3.2.1.post1，rxnfp 0.1.0，rdkit 2026.9.2
+- esm 3.2.1.post1，rxnfp 0.1.0（需 `--no-deps` 安装，见下），rdkit 2026.9.2
 - numpy 2.2.6，pandas 2.3.3，scipy 1.15.3，scikit-learn 1.7.2，PyYAML 6.0.4，tqdm 4.70.1，httpx 0.28.1
 
-锁定文件：`requirements_kinetics_abs.txt`。torch 需从 CPU index 安装。模型 checkpoint 信息由 `train.py` 写入 `checkpoint_best.pt` / `checkpoint_last.pt` 的 `config` 与 `experiment_summary.json`；本报告不内嵌大文件。
+锁定文件：`requirements_kinetics_abs.txt`。torch 需从 CPU index 安装；`rxnfp==0.1.0` 元数据硬钉冲突依赖，安装本文件后需执行 `pip install --no-deps rxnfp==0.1.0`。模型 checkpoint 信息由 `train.py` 写入 `checkpoint_best.pt` / `checkpoint_last.pt` 的 `config` 与 `experiment_summary.json`；本报告不内嵌大文件。
 
 ## 3. 数据适配与审计（P1）
 
@@ -75,7 +75,7 @@ ESM 兼容修复：`protein_features._patch_esmc_tokenizer_for_transformers()` �
 
 - baseline/fusion 输出形状 `[B,1]`。
 - 验证/测试预测 metadata 按样本展开。
-- checkpoint 使用 `weights_only=False` 兼容 numpy RNG state；`--resume` 已跑通。
+- checkpoint 使用 `weights_only=True` 加载；numpy RNG state 序列化为纯 Python 标量，CUDA resume 时 RNG tensor 固定在 CPU 再恢复；`--resume` 已跑通。
 - `predict` 已对冒烟集输出 42 行预测。
 - 合成张量测试覆盖 `graph_mode = none/uncontrolled/quality` 前向与结构图构建。
 
